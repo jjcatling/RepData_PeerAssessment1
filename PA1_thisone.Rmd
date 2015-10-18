@@ -1,0 +1,102 @@
+---
+title: "PA1_template.Rmd"
+author: "Joe"
+date: "Sunday, October 18, 2015"
+output: html_document
+---
+
+```{r readdata}
+## Read the data
+actData <- read.csv("activity.csv")
+```
+
+***
+
+## Steps taken per day
+
+```{r stepsperday}
+## Sum of steps per day
+sumSteps <- aggregate(actData$steps, list(actData$date), sum)
+## Create histogram
+hist(sumSteps$x, col = "pink", main = "Histogram of total steps taken per day", xlab = "Total steps taken per day")
+## Calculate mean and median
+meanSteps <- as.integer(mean(sumSteps$x, na.rm=TRUE))
+medianSteps <- median(sumSteps$x, na.rm=TRUE)
+```
+
+The mean number of steps per day is **`r meanSteps`**.  
+The median number of steps per day is **`r medianSteps`**.
+
+***
+
+## Average daily activity pattern
+
+```{r dailyactivity}
+## Average per interval
+meanInterval <- aggregate(actData$steps, list(actData$interval), mean, na.rm=TRUE)
+## Create time series chart
+plot(meanInterval$Group.1, meanInterval$x, xlab = "Interval",
+     ylab = "Average steps", main = "Average daily activity pattern", type="n")
+lines(meanInterval$Group.1, meanInterval$x)
+## Calculate maximum
+maxInterval <- meanInterval$Group.1[order(meanInterval$x, decreasing=T)[1]]
+```
+
+The 5-minute interval with the largest number of average steps per day is
+interval **`r maxInterval`**.  
+
+***
+
+## Imputing missing values
+
+```{r countmissing}
+## Count missing values
+countNA <- sum(is.na(actData$steps))
+```
+
+There are **`r countNA`** total missing values in the dataset.  
+To impute values, we'll simply replace these NAs with the mean value for their interval.
+
+```{r impute}
+## Merge original data with interval means
+actData2 <- merge(actData, meanInterval, by.x = "interval", by.y = "Group.1")
+## Use interval means as replacements for NAs
+actData2$steps[is.na(actData2$steps)] <- actData2$x[is.na(actData2$steps)]
+## Sum of steps per day
+sumSteps2 <- aggregate(actData2$steps, list(actData2$date), sum)
+## Create histogram
+hist(sumSteps2$x, col = "green", main = "Histogram of total steps taken per day", xlab = "Total steps taken per day")
+## Calculate mean and median
+meanSteps2 <- as.integer(mean(sumSteps2$x, na.rm=TRUE))
+medianSteps2 <- as.integer(median(sumSteps2$x, na.rm=TRUE))
+```
+
+The mean number of steps per day is now **`r meanSteps2`** *(previous value `r meanSteps`)*.  
+The median number of steps per day is now **`r medianSteps2`** *(previous value `r medianSteps`)*.  
+There is very little difference in mean and median; however, unsurprisingly, the total steps have increased (see y axes of histograms).
+
+***
+
+## Weekdays vs weekends
+
+```{r weekday}
+## Establish which days are weekdays and weekends
+actData2$date <- as.Date(actData2$date)
+actData2$weekday <- weekdays(actData2$date)
+weekdays1 <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+actData2$wDay <- factor((actData2$weekday %in% weekdays1), levels=c(FALSE, TRUE),
+                        labels=c('weekend', 'weekday'))
+## Split data files
+actWD <- subset(actData2, wDay == "weekday")
+meanIntervalWD <- aggregate(actWD$steps, list(actWD$interval), mean, na.rm=TRUE)
+actWE <- subset(actData2, wDay == "weekend")
+meanIntervalWE <- aggregate(actWE$steps, list(actWE$interval), mean, na.rm=TRUE)
+## Create panel plot
+par(mfrow=c(2,1))
+plot(meanIntervalWD$Group.1, meanIntervalWD$x, xlab = "Interval",
+     ylab = "Average steps", main = "Average weekday activity pattern", type="n")
+lines(meanIntervalWD$Group.1, meanIntervalWD$x)
+plot(meanIntervalWE$Group.1, meanIntervalWE$x, xlab = "Interval",
+     ylab = "Average steps", main = "Average weekend activity pattern", type="n")
+lines(meanIntervalWE$Group.1, meanIntervalWE$x)
+```
